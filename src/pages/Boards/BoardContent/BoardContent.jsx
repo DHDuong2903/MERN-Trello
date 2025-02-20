@@ -30,7 +30,7 @@ const ACTIVE_DRAG_ITEM_TYPE = {
   CARD: "ACTIVE_DRAG_ITEM_TYPE_CARD",
 };
 
-const BoardContent = ({ board }) => {
+const BoardContent = ({ board, createNewColumn, createNewCard, moveColumns }) => {
   // Yeu cau chuot di chuyen 10px thi moi kich hoat event, click khong goi event
   const mouseSensor = useSensor(MouseSensor, { activationConstraint: { distance: 10 } });
   // Nhan giu 250ms va dung sai cam ung 500px thi moi kich hoat event
@@ -242,6 +242,7 @@ const BoardContent = ({ board }) => {
         const dndOrderedColumns = arrayMove(orderedColumns, oldColumnIndex, newColumnIndex);
 
         // const dndOrderedColumnsIds = dndOrderedColumns.map((c) => c._id);
+        moveColumns(dndOrderedColumns);
 
         // Cap nhat lai state columns ban dau sau khi keo tha
         setOrderedColumns(dndOrderedColumns);
@@ -314,7 +315,7 @@ const BoardContent = ({ board }) => {
           p: "10px 0",
         }}
       >
-        <ListColumns columns={orderedColumns} />
+        <ListColumns columns={orderedColumns} createNewColumn={createNewColumn} createNewCard={createNewCard} />
         <DragOverlay dropAnimation={customDropAnimation}>
           {!activeDragItemType && null}
           {activeDragItemType === ACTIVE_DRAG_ITEM_TYPE.COLUMN && <Column column={activeDragItemData} />}

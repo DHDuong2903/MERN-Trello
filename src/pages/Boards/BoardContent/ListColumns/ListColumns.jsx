@@ -7,19 +7,23 @@ import NoteAddIcon from "@mui/icons-material/NoteAdd";
 import TextField from "@mui/material/TextField";
 import CloseIcon from "@mui/icons-material/Close";
 import { SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortable";
-const ListColumns = ({ columns }) => {
+const ListColumns = ({ columns, createNewColumn, createNewCard }) => {
   const [openNewColumnForm, setOpenNewColumnForm] = useState(false);
   const toggleOpenNewColumnForm = () => setOpenNewColumnForm(!openNewColumnForm);
 
   const [newColumnTitle, setNewColumnTitle] = useState("");
 
-  const addNewColumn = () => {
+  const addNewColumn = async () => {
     if (!newColumnTitle) {
       toast.error("Please enter a column title");
       return;
     }
-    console.log(newColumnTitle);
-    // Goi API o day
+    // Tao du lieu Column de goi API
+    const newColumnData = {
+      title: newColumnTitle,
+    };
+
+    await createNewColumn(newColumnData);
 
     // Dong trang thai them Column moi va Clear Input
     toggleOpenNewColumnForm();
@@ -39,7 +43,7 @@ const ListColumns = ({ columns }) => {
         }}
       >
         {columns?.map((column) => (
-          <Column key={column._id} column={column} />
+          <Column key={column._id} column={column} createNewCard={createNewCard} />
         ))}
 
         {/* Add new column */}

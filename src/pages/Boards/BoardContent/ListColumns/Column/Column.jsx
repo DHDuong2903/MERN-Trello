@@ -25,7 +25,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Opacity } from "@mui/icons-material";
 
-const Column = ({ column }) => {
+const Column = ({ column, createNewCard }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: column._id,
     data: { ...column },
@@ -55,13 +55,19 @@ const Column = ({ column }) => {
 
   const [newCardTitle, setNewCardTitle] = useState("");
 
-  const addNewCard = () => {
+  const addNewCard = async () => {
     if (!newCardTitle) {
       toast.error("Please enter card title");
       return;
     }
-    console.log(newCardTitle);
-    // Goi API o day
+
+    // Tao du lieu Card de goi API
+    const newCardData = {
+      title: newCardTitle,
+      columnId: column._id,
+    };
+
+    await createNewCard(newCardData);
 
     // Dong trang thai them Card moi va Clear Input
     toggleOpenNewCardForm();
