@@ -1,7 +1,5 @@
 import Box from "@mui/material/Box";
 import ListColumns from "./ListColumns/ListColumns";
-import { mapOrder } from "~/utils/sorts";
-
 import {
   DndContext,
   // MouseSensor,
@@ -30,7 +28,14 @@ const ACTIVE_DRAG_ITEM_TYPE = {
   CARD: "ACTIVE_DRAG_ITEM_TYPE_CARD",
 };
 
-const BoardContent = ({ board, createNewColumn, createNewCard, moveColumns }) => {
+const BoardContent = ({
+  board,
+  createNewColumn,
+  createNewCard,
+  moveColumns,
+  moveCardInTheSameColumn,
+  moveCardToDifferentColumn,
+}) => {
   // Yeu cau chuot di chuyen 10px thi moi kich hoat event, click khong goi event
   const mouseSensor = useSensor(MouseSensor, { activationConstraint: { distance: 10 } });
   // Nhan giu 250ms va dung sai cam ung 500px thi moi kich hoat event
@@ -50,7 +55,7 @@ const BoardContent = ({ board, createNewColumn, createNewCard, moveColumns }) =>
   const lastOverId = useRef(null);
 
   useEffect(() => {
-    setOrderedColumns(mapOrder(board?.columns, board?.columnOrderIds, "_id"));
+    setOrderedColumns(board.columns);
   }, [board]);
 
   // Tim 1 cai column theo CardId
@@ -58,7 +63,7 @@ const BoardContent = ({ board, createNewColumn, createNewCard, moveColumns }) =>
     return orderedColumns.find((column) => column?.cards?.map((card) => card?._id)?.includes(cardId));
   };
 
-  // Function chung xu ly viec: Cap nhat lai State trong truong hop di chuyen card giua cac column khac nhau
+  // Khoi tao Function chung xu ly viec: Cap nhat lai State trong truong hop di chuyen card giua cac column khac nhau
   const moveCardBetweenDifferentColumns = (
     overColumn,
     overCardId,
@@ -66,7 +71,8 @@ const BoardContent = ({ board, createNewColumn, createNewCard, moveColumns }) =>
     over,
     activeColumn,
     activeDraggingCardId,
-    activeDraggingCardData
+    activeDraggingCardData,
+    triggerFrom
   ) => {
     setOrderedColumns((prevColumns) => {
       // Tim vi tri (index) cua cai overCard trong column dich (noi ma activeCard sap duoc tha)
@@ -114,6 +120,10 @@ const BoardContent = ({ board, createNewColumn, createNewCard, moveColumns }) =>
 
         // Cap nhat lai mang cardOrderIds cho chuan du lieu
         nextOverColumn.cardOrderIds = nextOverColumn.cards.map((card) => card._id);
+      }
+
+      if (triggerFrom === "handleDragEnd") {
+        moveCardToDifferentColumn(activeDragItemId, oldColumnWhenDraggingCard._id, nextOverColumn._id, nextColumns);
       }
 
       return nextColumns;
@@ -166,7 +176,8 @@ const BoardContent = ({ board, createNewColumn, createNewCard, moveColumns }) =>
         over,
         activeColumn,
         activeDraggingCardId,
-        activeDraggingCardData
+        activeDraggingCardData,
+        "handleDragOver"
       );
     }
   };
@@ -203,7 +214,8 @@ const BoardContent = ({ board, createNewColumn, createNewCard, moveColumns }) =>
           over,
           activeColumn,
           activeDraggingCardId,
-          activeDraggingCardData
+          activeDraggingCardData,
+          "handleDragEnd"
         );
       } else {
         // Hanh dong keo tha card trong cung 1 column
@@ -215,6 +227,8 @@ const BoardContent = ({ board, createNewColumn, createNewCard, moveColumns }) =>
         // Dung arrayMove vi keo card trong 1 cai column giong voi keo column trong 1 cai boardContent
         const dndOrderedCards = arrayMove(oldColumnWhenDraggingCard?.cards, oldCardIndex, newCardIndex);
 
+        const dndOrderedCardIds = dndOrderedCards.map((card) => card._id);
+
         setOrderedColumns((prevColumns) => {
           const nextColumns = cloneDeep(prevColumns);
 
@@ -222,11 +236,13 @@ const BoardContent = ({ board, createNewColumn, createNewCard, moveColumns }) =>
           const targetColumn = nextColumns.find((column) => column._id === overColumn._id);
           // Cap nhat lai 2 gia tri moi la card va cardOrderIds trong targetColumn
           targetColumn.cards = dndOrderedCards;
-          targetColumn.cardOrderIds = dndOrderedCards.map((card) => card._id);
+          targetColumn.cardOrderIds = dndOrderedCardIds;
 
           // Tra ve gia tri state moi chuan vi tri
           return nextColumns;
         });
+
+        moveCardInTheSameColumn(dndOrderedCards, dndOrderedCardIds, oldColumnWhenDraggingCard._id);
       }
     }
 
@@ -241,11 +257,11 @@ const BoardContent = ({ board, createNewColumn, createNewCard, moveColumns }) =>
         // Dung arrayMove de sap xep lai mang Columns ban dau
         const dndOrderedColumns = arrayMove(orderedColumns, oldColumnIndex, newColumnIndex);
 
-        // const dndOrderedColumnsIds = dndOrderedColumns.map((c) => c._id);
-        moveColumns(dndOrderedColumns);
-
         // Cap nhat lai state columns ban dau sau khi keo tha
         setOrderedColumns(dndOrderedColumns);
+
+        // const dndOrderedColumnsIds = dndOrderedColumns.map((c) => c._id);
+        moveColumns(dndOrderedColumns);
       }
     }
 

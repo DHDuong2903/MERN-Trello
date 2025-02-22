@@ -3,8 +3,18 @@ import Container from "@mui/material/Container";
 import AppBar from "~/components/AppBar/AppBar";
 import BoardBar from "./BoardBar/BoardBar";
 import BoardContent from "./BoardContent/BoardContent";
-import { fetchBoardDetailsAPI, updateBoardDetailsAPI, createNewColumnAPI, createNewCardAPI } from "~/apis";
-// import { mockData } from "~/apis/mock-data";
+import { mapOrder } from "~/utils/sorts";
+import Box from "@mui/material/Box";
+import Typography from "@mui/material/Typography";
+import CircularProgress from "@mui/material/CircularProgress";
+import {
+  fetchBoardDetailsAPI,
+  updateBoardDetailsAPI,
+  moveCardToDifferentColumnAPI,
+  createNewColumnAPI,
+  updateColumnDetailsAPI,
+  createNewCardAPI,
+} from "~/apis";
 import { generatePlaceholderCard } from "~/utils/formatters";
 import { isEmpty } from "lodash";
 
@@ -15,11 +25,14 @@ const Board = () => {
     const boardId = "67a70e5fa316e8e86e3efab4";
     // Call API
     fetchBoardDetailsAPI(boardId).then((board) => {
+      board.columns = mapOrder(board.columns, board.columnOrderIds, "_id");
       // Xu ly keo tha vao mot column rong
       board.columns.forEach((column) => {
         if (isEmpty(column.cards)) {
           column.cards = [generatePlaceholderCard(column)];
           column.cardOrderIds = [generatePlaceholderCard(column)._id];
+        } else {
+          column.cards = mapOrder(column.cards, column.cardOrderIds, "_id");
         }
       });
       setBoard(board);
@@ -61,7 +74,7 @@ const Board = () => {
   };
 
   // Nhiem vu ham: Goi API va xu ly khi keo tha column xong xuoi
-  const moveColumns = async (dndOrderedColumns) => {
+  const moveColumns = (dndOrderedColumns) => {
     // Update cho chuan du lieu State Board
     const dndOrderedColumnsIds = dndOrderedColumns.map((c) => c._id);
     const newBoard = { ...board };
@@ -70,8 +83,62 @@ const Board = () => {
     setBoard(newBoard);
 
     // Goi API update board
-    await updateBoardDetailsAPI(newBoard._id, { columnOrderIds: newBoard.columnOrderIds });
+    updateBoardDetailsAPI(newBoard._id, { columnOrderIds: newBoard.columnOrderIds });
   };
+
+  const moveCardInTheSameColumn = (dndOrderedCards, dndOrderedCardIds, columnId) => {
+    // Update cho chuan du lieu State Board
+    const newBoard = { ...board };
+    const columnToUpdate = newBoard.columns.find((column) => column._id === columnId);
+    if (columnToUpdate) {
+      columnToUpdate.cards = dndOrderedCards;
+      columnToUpdate.cardOrderIds = dndOrderedCardIds;
+    }
+    setBoard(newBoard);
+    // Goi API update board
+    updateColumnDetailsAPI(columnId, { cardOrderIds: dndOrderedCardIds });
+  };
+
+  // B1: Cap nhat mang cardOrderIds cua Column ban dau chua no (xoa _id cua Card ra khoi mang)
+  // B2: Cap nhat mang cardOrderIds cua Column tiep theo (them _id cua Card vao mang)
+  // B3: Cap nhat lai truong columnId moi cua cai Card da keo
+  // => Lam moi mot API rieng
+
+  const moveCardToDifferentColumn = (currentCardId, prevColumnId, nextColumnId, dndOrderedColumns) => {
+    // Update cho chuan du lieu State Board
+    const dndOrderedColumnsIds = dndOrderedColumns.map((c) => c._id);
+    const newBoard = { ...board };
+    newBoard.columns = dndOrderedColumns;
+    newBoard.columnOrderIds = dndOrderedColumnsIds;
+    setBoard(newBoard);
+
+    // Goi API xu ly phia BE
+    moveCardToDifferentColumnAPI({
+      currentCardId,
+      prevColumnId,
+      prevCardOrderIds: dndOrderedColumns.find((c) => c._id === prevColumnId)?.cardOrderIds,
+      nextColumnId,
+      nextCardOrderIds: dndOrderedColumns.find((c) => c._id === nextColumnId)?.cardOrderIds,
+    });
+  };
+
+  if (!board) {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 2,
+          width: "100vw",
+          height: "100vh",
+        }}
+      >
+        <CircularProgress />
+        <Typography>Loading Board...</Typography>
+      </Box>
+    );
+  }
 
   return (
     <Container disableGutters maxWidth={false} sx={{ height: "100vh" }}>
@@ -82,6 +149,8 @@ const Board = () => {
         createNewColumn={createNewColumn}
         createNewCard={createNewCard}
         moveColumns={moveColumns}
+        moveCardInTheSameColumn={moveCardInTheSameColumn}
+        moveCardToDifferentColumn={moveCardToDifferentColumn}
       />
     </Container>
   );
