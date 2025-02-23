@@ -35,6 +35,7 @@ const BoardContent = ({
   moveColumns,
   moveCardInTheSameColumn,
   moveCardToDifferentColumn,
+  deleteColumnDetails,
 }) => {
   // Yeu cau chuot di chuyen 10px thi moi kich hoat event, click khong goi event
   const mouseSensor = useSensor(MouseSensor, { activationConstraint: { distance: 10 } });
@@ -331,7 +332,12 @@ const BoardContent = ({
           p: "10px 0",
         }}
       >
-        <ListColumns columns={orderedColumns} createNewColumn={createNewColumn} createNewCard={createNewCard} />
+        <ListColumns
+          columns={orderedColumns}
+          createNewColumn={createNewColumn}
+          createNewCard={createNewCard}
+          deleteColumnDetails={deleteColumnDetails}
+        />
         <DragOverlay dropAnimation={customDropAnimation}>
           {!activeDragItemType && null}
           {activeDragItemType === ACTIVE_DRAG_ITEM_TYPE.COLUMN && <Column column={activeDragItemData} />}

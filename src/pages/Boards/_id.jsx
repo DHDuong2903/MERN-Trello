@@ -7,12 +7,14 @@ import { mapOrder } from "~/utils/sorts";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import CircularProgress from "@mui/material/CircularProgress";
+import { toast } from "react-toastify";
 import {
   fetchBoardDetailsAPI,
   updateBoardDetailsAPI,
   moveCardToDifferentColumnAPI,
   createNewColumnAPI,
   updateColumnDetailsAPI,
+  deleteColumnDetailsAPI,
   createNewCardAPI,
 } from "~/apis";
 import { generatePlaceholderCard } from "~/utils/formatters";
@@ -67,8 +69,13 @@ const Board = () => {
     const newBoard = { ...board };
     const columnToUpdate = newBoard.columns.find((column) => column._id === createdCard.columnId);
     if (columnToUpdate) {
-      columnToUpdate.cards.push(createdCard);
-      columnToUpdate.cardOrderIds.push(createdCard._id);
+      if (columnToUpdate.cards.some((card) => card.FE_PlaceholderCard)) {
+        columnToUpdate.cards = [createdCard];
+        columnToUpdate.cardOrderIds = [createdCard._id];
+      } else {
+        columnToUpdate.cards.push(createdCard);
+        columnToUpdate.cardOrderIds.push(createdCard._id);
+      }
     }
     setBoard(newBoard);
   };
@@ -113,12 +120,35 @@ const Board = () => {
     setBoard(newBoard);
 
     // Goi API xu ly phia BE
+    let prevCardOrderIds = dndOrderedColumns.find((c) => c._id === prevColumnId)?.cardOrderIds;
+    let nextCardOrderIds = dndOrderedColumns.find((c) => c._id === nextColumnId)?.cardOrderIds;
+
+    // Xu ly keo Card cuoi cung ra khoi Column, Column rong co placeholder card, can xoa no di
+    if (prevCardOrderIds[0].includes("placeholder-card")) prevCardOrderIds = [];
+    // if (nextCardOrderIds[0].includes("placeholder-card")) nextCardOrderIds.shift();
+    if (nextCardOrderIds?.length) {
+      nextCardOrderIds = nextCardOrderIds.filter((_id) => !_id.includes("placeholder-card"));
+    }
+
     moveCardToDifferentColumnAPI({
       currentCardId,
       prevColumnId,
-      prevCardOrderIds: dndOrderedColumns.find((c) => c._id === prevColumnId)?.cardOrderIds,
+      prevCardOrderIds,
       nextColumnId,
-      nextCardOrderIds: dndOrderedColumns.find((c) => c._id === nextColumnId)?.cardOrderIds,
+      nextCardOrderIds,
+    });
+  };
+
+  const deleteColumnDetails = (columnId) => {
+    // Update chuan du lieu State Board
+    const newBoard = { ...board };
+    newBoard.columns = newBoard.columns.filter((c) => c._id !== columnId);
+    newBoard.columnOrderIds = newBoard.columnOrderIds.filter((_id) => _id !== columnId);
+    setBoard(newBoard);
+
+    // Goi API xu ly phia BE
+    deleteColumnDetailsAPI(columnId).then((res) => {
+      toast.success(res?.deleteResult);
     });
   };
 
@@ -151,6 +181,7 @@ const Board = () => {
         moveColumns={moveColumns}
         moveCardInTheSameColumn={moveCardInTheSameColumn}
         moveCardToDifferentColumn={moveCardToDifferentColumn}
+        deleteColumnDetails={deleteColumnDetails}
       />
     </Container>
   );
