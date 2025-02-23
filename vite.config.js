@@ -4,6 +4,9 @@ import svgr from "vite-plugin-svgr";
 
 // https://vite.dev/config/
 export default defineConfig({
+  define: {
+    "process.env": process.env,
+  },
   plugins: [svgr(), react()],
   resolve: {
     alias: [{ find: "~", replacement: "/src" }],
